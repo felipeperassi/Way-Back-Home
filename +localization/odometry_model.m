@@ -1,11 +1,11 @@
-function new_particles = odometry_model(particles, v_cmd, w_cmd, sampleTime)
-    motion_noise = [0.01, deg2rad(1)]; % [ruido_v, ruido_w]
+function new_particles = odometry_model(particles, vel, sampleTime)
+    motion_noise = [0.5, deg2rad(3)]; % [ruido_v, ruido_w]
     new_particles = particles;
     N = size(particles, 1);
 
     for i = 1:N
-        v = v_cmd + randn * motion_noise(1);
-        w = w_cmd + randn * motion_noise(2);
+        v = vel(1) + randn * motion_noise(1);
+        w = vel(2) + randn * motion_noise(2);
 
         theta = particles(i, 3);
         dx = v * sampleTime * cos(theta);

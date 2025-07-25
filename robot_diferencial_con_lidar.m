@@ -52,8 +52,8 @@ lidar = LidarSensor;
 lidar.sensorOffset = [0,0];     % Posicion del sensor en el robot (asumiendo mundo 2D)
 scaleFactor = 10;                %decimar lecturas de lidar acelera el algoritmo
 num_scans = 513/scaleFactor;
-hokuyo_step_a = deg2rad(-45);
-hokuyo_step_c = deg2rad(45);
+hokuyo_step_a = deg2rad(-90);
+hokuyo_step_c = deg2rad(90);
 
 lidar.scanAngles = linspace(hokuyo_step_a,hokuyo_step_c,num_scans);
 lidar.maxRange = 5;
@@ -91,8 +91,8 @@ else
 end
 
 % Inicializar las particulas
-num_particles = 250; % Numero de particulas
-particles = initialize_particles(num_particles, map); % Inicializar particulas en el mapa
+num_particles = 5000; % Numero de particulas
+particles = localization.initialize_particles(num_particles, map); % Inicializar particulas en el mapa
 
 for idx = 2:numel(tVec)   
 
@@ -141,8 +141,8 @@ for idx = 2:numel(tVec)
         [wL,wR] = inverseKinematics(dd,v_cmd,w_cmd);
         % Velocidad resultante
         [v,w] = forwardKinematics(dd,wL,wR);
-        velB = [v;0;w]; % velocidades en la terna del robot [vx;vy;w]
-        vel = bodyToWorld(velB,pose(:,idx-1));  % Conversion de la terna del robot a la global
+        velB = [v; 0; w]; % velocidades en la terna del robot [vx;vy;w]
+        vel = bodyToWorld(velB, pose(:,idx-1));  % Conversion de la terna del robot a la global
         % Realizar un paso de integracion
         pose(:,idx) = pose(:,idx-1) + vel*sampleTime; 
         % Tomar nueva medicion del lidar
@@ -165,13 +165,12 @@ for idx = 2:numel(tVec)
         % proxima iteración para la generacion de comandos de velocidad
         % ...
     
-    if idx <= 50
-        disp(['Iteración ' num2str(idx) ':']);
+    if idx <= 4
         v_cmd = 0;
         w_cmd = 0.5;
-        [pose_est, particles] = particles_filter(map, particles, v_cmd, w_cmd, sampleTime, lidar, ranges);
-        disp(pose_est);
+        [pose_est, particles] = localization.particles_filter(map, particles, vel, sampleTime, lidar, ranges);
     end
+
     % ---- Fin del COMPLETAR ACA ----
         
     %%
