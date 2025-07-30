@@ -1,28 +1,26 @@
-function weights = measurement_model_likelihood_field(map, particles, ranges, distance_map, resolution)
+function weights = measurement_model_likelihood_field(map, particles, ranges, distance_map)
     n_particles = size(particles, 1);
     log_weights = zeros(n_particles, 1);
     alpha = linspace(-pi / 2, pi / 2, size(ranges, 1));
-    sigma = 0.8;
+    sigma = 0.8;  
 
     for i = 1:n_particles
-        x_hit = particles(i, 1) + ranges .* cos(particles(i, 3) + alpha);
-        y_hit = particles(i, 2) + ranges .* sin(particles(i, 3) + alpha);
-        
-        fila = round(y_hit / resolution);
-        col = round(x_hit / resolution);
-        
-        valid = fila >= 1 & fila <= size(distance_map, 1) & ...
-        col >= 1 & col <= size(distance_map, 2);
+        valid_ranges = ~isnan(ranges);
+        x_ray = particles(i, 1) + valid_ranges .* cos(particles(i, 3) + alpha);
+        y_ray = particles(i, 2) + valid_ranges .* sin(particles(i, 3) + alpha);
 
+        matrix_idx = world2grid(map, [x_ray(:) y_ray(:)]);
+        fila = matrix_idx(:, 1);
+        col = matrix_idx(:, 2);
+
+        valid = fila >= 1 & fila <= size(distance_map, 1) & col >= 1 & col <= size(distance_map, 2);
         fila = fila(valid);
         col = col(valid);
+        
         % Indexar de forma vectorial
         idx = sub2ind(size(distance_map), fila, col);
         dist = distance_map(idx);
-        disp('index:');
-        disp(idx);
 
-        % valid = ~isnan(dist);
         if numel(dist) > 5
             log_prob = -0.5 * mean(dist.^2) / (sigma^2); 
         else

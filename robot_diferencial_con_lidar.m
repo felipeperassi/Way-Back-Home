@@ -91,7 +91,7 @@ else
 end
 
 % Inicializar las particulas
-num_particles = 20000; % Numero de particulas
+num_particles = 10000; % Numero de particulas
 particles = localization.initialize_particles(num_particles, map); % Inicializar particulas en el mapa
 [distance_map, M] = localization.calculate_distance_map(map); % Calcular mapa de distancias
 
@@ -179,12 +179,12 @@ for idx = 2:numel(tVec)
         case 'localization' % el robot se localiza en el mapa
 
             if idx <= 4 % primeras iteraciones, se generan muchas partículas
-                [pose_est, particles] = localization.particles_filter(map, particles, vel, sampleTime, ranges, distance_map, map.Resolution);
+                [pose_est, particles] = localization.particles_filter(map, particles, vel, sampleTime, ranges, distance_map);
 
             elseif idx == 5 % se obtiene la pose estimada y se inicializan menos particulas para quitarle costo computacional
                 num_particles = 25;
                 new_particles = localization.initialize_particles_in_pose(num_particles, pose_est, map);
-                [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, map.Resolution);
+                [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map);
 
                 robot_state = 'calculate_destiny'; 
             end
@@ -195,7 +195,7 @@ for idx = 2:numel(tVec)
             robot_state = 'navigation';
         
         case 'navigation' % el robot navega hacia el destino
-            [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, map.Resolution);
+            [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map);
 
             if obstacle
                 disp('Detecte un obstaculo a ' + string(min_dist));
@@ -219,7 +219,7 @@ for idx = 2:numel(tVec)
                         dx = wp(1) - x;
                         dy = wp(2) - y;
                         dist_to_wp = norm([dx dy]);
-                        if dist_to_wp < 0.3
+                        if dist_to_wp < 0.4
                             next_wp_idx = next_wp_idx - 1;
                         else
                             goalReached = true;
@@ -239,7 +239,7 @@ for idx = 2:numel(tVec)
             end
         
         case 'reactive' % el robot reacciona ante un obstaculo detectado
-            [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, map.Resolution);
+            [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map);
 
             if obstacle && count_react < 10
                 disp('Obstaculo detectado, deteniendo robot');
