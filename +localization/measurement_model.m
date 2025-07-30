@@ -1,7 +1,7 @@
 function weights = measurement_model(particles, lidar, ranges, map)
     n_particles = size(particles, 1);
     log_weights = zeros(n_particles, 1);
-    sigma = 0.07;
+    sigma = 0.02;
 
     for i = 1:n_particles
         simulated_ranges = lidar(particles(i, :)');

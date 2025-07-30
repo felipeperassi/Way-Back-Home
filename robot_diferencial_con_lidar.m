@@ -67,7 +67,7 @@ attachLidarSensor(viz,lidar);
 
 simulationDuration = 3*60; %3*60;     % Duracion total [s]
 sampleTime = 0.1;                   % Sample time [s]
-initPose = [18; 16; pi/2];           % Pose inicial (x y theta) del robot simulado (el robot puede arrancar en cualquier lugar valido del mapa)
+initPose = [30; 6; pi];           % Pose inicial (x y theta) del robot simulado (el robot puede arrancar en cualquier lugar valido del mapa)
                                     %  probar iniciar el robot en distintos lugares                                  
                                   
 % Inicializar vectores de tiempo:1010
@@ -91,8 +91,9 @@ else
 end
 
 % Inicializar las particulas
-num_particles = 7000; % Numero de particulas
+num_particles = 20000; % Numero de particulas
 particles = localization.initialize_particles(num_particles, map); % Inicializar particulas en el mapa
+[distance_map, M] = localization.calculate_distance_map(map); % Calcular mapa de distancias
 
 for idx = 2:numel(tVec)   
 
@@ -178,23 +179,23 @@ for idx = 2:numel(tVec)
         case 'localization' % el robot se localiza en el mapa
 
             if idx <= 4 % primeras iteraciones, se generan muchas partículas
-                [pose_est, particles] = localization.particles_filter(map, particles, vel, sampleTime, lidar, ranges);
+                [pose_est, particles] = localization.particles_filter(map, particles, vel, sampleTime, ranges, distance_map, map.Resolution);
 
             elseif idx == 5 % se obtiene la pose estimada y se inicializan menos particulas para quitarle costo computacional
                 num_particles = 25;
                 new_particles = localization.initialize_particles_in_pose(num_particles, pose_est, map);
-                [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, lidar, ranges);
+                [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, map.Resolution);
 
                 robot_state = 'calculate_destiny'; 
             end
         
         case 'calculate_destiny' % calcular el destino y generar la ruta
-            [path_points, total_cost, path_length] = astar(map, map.Resolution, pose(1:2, idx-1), goal_world);
+            [path_points, total_cost, path_length] = astar(map.Resolution, pose(1:2, idx-1), goal_world, distance_map, M);
             next_wp_idx = size(path_points, 1);
             robot_state = 'navigation';
         
         case 'navigation' % el robot navega hacia el destino
-            [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, lidar, ranges);
+            [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, map.Resolution);
 
             if obstacle
                 disp('Detecte un obstaculo a ' + string(min_dist));
@@ -238,8 +239,8 @@ for idx = 2:numel(tVec)
             end
         
         case 'reactive' % el robot reacciona ante un obstaculo detectado
-            [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, lidar, ranges);
-            
+            [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, map.Resolution);
+
             if obstacle && count_react < 10
                 disp('Obstaculo detectado, deteniendo robot');
                 v_cmd = 0;
@@ -248,7 +249,7 @@ for idx = 2:numel(tVec)
             
             elseif obstacle && count_react >= 10 && count_react < 15
                 disp('Obstaculo detectado, girando para evitar');
-                v_cmd = 0.1;
+                v_cmd = 0.05;
                 w_cmd = 0.5 * max_angle;
                 count_react = count_react + 1;
 

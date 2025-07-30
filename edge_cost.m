@@ -10,7 +10,7 @@ function cost = edge_cost(parent, child, map, distanceMap)
     if occ < threshold
         % Penalizar inversamente proporcional a la distancia a obstáculo
         % A mayor cercanía, mayor penalización
-        if d < 7   % zona de seguridad: menos de 3 celdas (~60cm si resolución = 5)
+        if d < 10   % zona de seguridad: menos de 3 celdas (~60cm si resolución = 5)
             safety_penalty = 100 * (1 / (d + 0.1));  % evitar división por 0
         else
             safety_penalty = 0;

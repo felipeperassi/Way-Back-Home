@@ -1,10 +1,4 @@
-function [path_points, total_cost, path_length] = astar(map, resolution, start_world, goal_world)
-
-    % Obtener la matriz de ocupación y calcular mapa de distancias
-    M = occupancyMatrix(map);
-    M = flipud(M);  % Y hacia arriba
-    binaryMap = M > 0.1;
-    distanceMap = bwdist(binaryMap);
+function [path_points, total_cost, path_length] = astar(resolution, start_world, goal_world, distance_map, M)
 
     % Dimensiones
     [h, w] = size(M);
@@ -47,7 +41,7 @@ function [path_points, total_cost, path_length] = astar(map, resolution, start_w
         n = neighbors(parent, [h, w]);
         for i = 1:size(n,1)
             child = n(i,:);
-            cost_val = costs(y,x) + edge_cost(parent, child, M, distanceMap);
+            cost_val = costs(y,x) + edge_cost(parent, child, M, distance_map);
             heuristic_val = heuristic(child, goal);
             if cost_val < costs(child(1), child(2))
                 costs(child(1), child(2)) = cost_val;
