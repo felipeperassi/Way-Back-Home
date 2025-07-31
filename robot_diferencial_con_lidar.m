@@ -55,7 +55,7 @@ num_scans = 513/scaleFactor;
 hokuyo_step_a = deg2rad(-90);
 hokuyo_step_c = deg2rad(90);
 
-lidar.scanAngles = linspace(hokuyo_step_a,hokuyo_step_c,num_scans);
+lidar.scanAngles = linspace(hokuyo_step_a, hokuyo_step_c, num_scans);
 lidar.maxRange = 5;
 
 %% Crear visualizacion
@@ -67,7 +67,7 @@ attachLidarSensor(viz,lidar);
 
 simulationDuration = 3*60; %3*60;     % Duracion total [s]
 sampleTime = 0.1;                   % Sample time [s]
-initPose = [30; 6; pi];           % Pose inicial (x y theta) del robot simulado (el robot puede arrancar en cualquier lugar valido del mapa)
+initPose = [18; 16; pi/2];           % Pose inicial (x y theta) del robot simulado (el robot puede arrancar en cualquier lugar valido del mapa)
                                     %  probar iniciar el robot en distintos lugares                                  
                                   
 % Inicializar vectores de tiempo:1010
@@ -91,7 +91,7 @@ else
 end
 
 % Inicializar las particulas
-num_particles = 10000; % Numero de particulas
+num_particles = 5000; % Numero de particulas
 particles = localization.initialize_particles(num_particles, map); % Inicializar particulas en el mapa
 [distance_map, M] = localization.calculate_distance_map(map); % Calcular mapa de distancias
 
@@ -178,10 +178,10 @@ for idx = 2:numel(tVec)
     switch robot_state
         case 'localization' % el robot se localiza en el mapa
 
-            if idx <= 4 % primeras iteraciones, se generan muchas partículas
+            if idx <= 20 % primeras iteraciones, se generan muchas partículas
                 [pose_est, particles] = localization.particles_filter(map, particles, vel, sampleTime, ranges, distance_map);
 
-            elseif idx == 5 % se obtiene la pose estimada y se inicializan menos particulas para quitarle costo computacional
+            elseif idx == 21 % se obtiene la pose estimada y se inicializan menos particulas para quitarle costo computacional
                 num_particles = 25;
                 new_particles = localization.initialize_particles_in_pose(num_particles, pose_est, map);
                 [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map);
