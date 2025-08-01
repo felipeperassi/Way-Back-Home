@@ -67,7 +67,7 @@ attachLidarSensor(viz,lidar);
 
 simulationDuration = 3*60; %3*60;     % Duracion total [s]
 sampleTime = 0.1;                   % Sample time [s]
-initPose = [30; 6; pi/2];           % Pose inicial (x y theta) del robot simulado (el robot puede arrancar en cualquier lugar valido del mapa)
+initPose = [10; 17; pi/2];           % Pose inicial (x y theta) del robot simulado (el robot puede arrancar en cualquier lugar valido del mapa)
                                     %  probar iniciar el robot en distintos lugares                                  
                                   
 % Inicializar vectores de tiempo:1010
@@ -94,6 +94,9 @@ end
 num_particles = 10000; % Numero de particulas
 particles = localization.initialize_particles(num_particles, map); % Inicializar particulas en el mapa
 [distance_map, M] = localization.calculate_distance_map(map); % Calcular mapa de distancias
+Mapa_auxiliar = occupancyMatrix(map);
+Mapa_auxiliar = flipud(Mapa_auxiliar);  % Y hacia arriba
+distance_map_para_astar = bwdist(Mapa_auxiliar > 0.1);
 
 for idx = 2:numel(tVec)   
 
@@ -175,22 +178,18 @@ for idx = 2:numel(tVec)
 
     obstacle = obstacle_detected(min_dist);
 
-    Mapa_auxiliar = occupancyMatrix(map);
-    Mapa_auxiliar = flipud(Mapa_auxiliar);  % Y hacia arriba
-    distance_map_para_astar = bwdist(Mapa_auxiliar > 0.1);
-
     switch robot_state
         case 'localization' % el robot se localiza en el mapa
 
-                    % Control simple
-                    v_cmd = 0.1; 
-                    w_cmd = 0.1;
+            % Control simple
+            v_cmd = 0; 
+            w_cmd = 0.1;
 
-            if idx <= 100 % primeras iteraciones, se generan muchas partículas
+            if idx <= 300 % primeras iteraciones, se generan muchas partículas
                 [pose_est, particles] = localization.particles_filter(map, particles, vel, sampleTime, ranges, distance_map, M);
 
-            elseif idx == 101 % se obtiene la pose estimada y se inicializan menos particulas para quitarle costo computacional
-                num_particles = 25;
+            elseif idx == 301 % se obtiene la pose estimada y se inicializan menos particulas para quitarle costo computacional
+                num_particles = 100;
                 new_particles = localization.initialize_particles_in_pose(num_particles, pose_est, map);
                 [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, M);
 
@@ -249,19 +248,19 @@ for idx = 2:numel(tVec)
         case 'reactive' % el robot reacciona ante un obstaculo detectado
             [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, M);
 
-            if obstacle && count_react < 10
+            if obstacle && count_react < 20
                 disp('Obstaculo detectado, deteniendo robot');
                 v_cmd = 0;
                 w_cmd = 0.5 * max_angle; 
                 count_react = count_react + 1;
             
-            elseif obstacle && count_react >= 10 && count_react < 15
+            elseif obstacle && count_react >= 20 && count_react < 30
                 disp('Obstaculo detectado, girando para evitar');
                 v_cmd = 0.05;
                 w_cmd = 0.5 * max_angle;
                 count_react = count_react + 1;
 
-            elseif obstacle && count_react >= 15
+            elseif obstacle && count_react >= 30
                 count_react = 0;
                 robot_state = 'calculate_destiny';
 
