@@ -178,13 +178,13 @@ for idx = 2:numel(tVec)
     switch robot_state
         case 'localization' % el robot se localiza en el mapa
 
-            if idx <= 20 % primeras iteraciones, se generan muchas partículas
-                [pose_est, particles] = localization.particles_filter(map, particles, vel, sampleTime, ranges, distance_map);
+            if idx <= 1000 % primeras iteraciones, se generan muchas partículas
+                [pose_est, particles] = localization.particles_filter(map, particles, vel, sampleTime, ranges, distance_map, M);
 
-            elseif idx == 21 % se obtiene la pose estimada y se inicializan menos particulas para quitarle costo computacional
+            elseif idx == 1001 % se obtiene la pose estimada y se inicializan menos particulas para quitarle costo computacional
                 num_particles = 25;
                 new_particles = localization.initialize_particles_in_pose(num_particles, pose_est, map);
-                [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map);
+                [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, M);
 
                 robot_state = 'calculate_destiny'; 
             end
@@ -195,7 +195,7 @@ for idx = 2:numel(tVec)
             robot_state = 'navigation';
         
         case 'navigation' % el robot navega hacia el destino
-            [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map);
+            [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, M);
 
             if obstacle
                 disp('Detecte un obstaculo a ' + string(min_dist));
@@ -239,7 +239,7 @@ for idx = 2:numel(tVec)
             end
         
         case 'reactive' % el robot reacciona ante un obstaculo detectado
-            [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map);
+            [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, M);
 
             if obstacle && count_react < 10
                 disp('Obstaculo detectado, deteniendo robot');

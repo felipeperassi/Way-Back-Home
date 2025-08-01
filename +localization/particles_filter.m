@@ -1,8 +1,8 @@
-function [pose, new_particles] = particles_filter(map, particles, vel, sampleTime, ranges, distance_map)
+function [pose, new_particles] = particles_filter(map, particles, vel, sampleTime, ranges, distance_map, M)
     disp('Iniciando filtro de partículas...');
     odom_particles = particles + vel' * sampleTime; % Actualizar partículas con la velocidad del robot
     % odom_particles = localization.odometry_model(particles, vel, sampleTime);
-    weights = localization.measurement_model_likelihood_field(map, odom_particles, ranges, distance_map);
+    weights = localization.measurement_model_likelihood_field(map, odom_particles, ranges, distance_map, M);
     new_particles = localization.resample(odom_particles, weights);
     pose = mean(new_particles, 1);
     disp('Filtro de partículas completado.');
