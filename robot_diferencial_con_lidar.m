@@ -67,7 +67,7 @@ attachLidarSensor(viz,lidar);
 
 simulationDuration = 3*60; %3*60;     % Duracion total [s]
 sampleTime = 0.1;                   % Sample time [s]
-initPose = [18; 16; pi/2];           % Pose inicial (x y theta) del robot simulado (el robot puede arrancar en cualquier lugar valido del mapa)
+initPose = [30; 6; pi/2];           % Pose inicial (x y theta) del robot simulado (el robot puede arrancar en cualquier lugar valido del mapa)
                                     %  probar iniciar el robot en distintos lugares                                  
                                   
 % Inicializar vectores de tiempo:1010
@@ -91,7 +91,7 @@ else
 end
 
 % Inicializar las particulas
-num_particles = 5000; % Numero de particulas
+num_particles = 10000; % Numero de particulas
 particles = localization.initialize_particles(num_particles, map); % Inicializar particulas en el mapa
 [distance_map, M] = localization.calculate_distance_map(map); % Calcular mapa de distancias
 
@@ -174,14 +174,22 @@ for idx = 2:numel(tVec)
     max_angle = wrapToPi(lidar.scanAngles(idx_max));
 
     obstacle = obstacle_detected(min_dist);
-    
+
+    Mapa_auxiliar = occupancyMatrix(map);
+    Mapa_auxiliar = flipud(Mapa_auxiliar);  % Y hacia arriba
+    distance_map_para_astar = bwdist(Mapa_auxiliar > 0.1);
+
     switch robot_state
         case 'localization' % el robot se localiza en el mapa
 
-            if idx <= 1000 % primeras iteraciones, se generan muchas partículas
+                    % Control simple
+                    v_cmd = 0.1; 
+                    w_cmd = 0.1;
+
+            if idx <= 100 % primeras iteraciones, se generan muchas partículas
                 [pose_est, particles] = localization.particles_filter(map, particles, vel, sampleTime, ranges, distance_map, M);
 
-            elseif idx == 1001 % se obtiene la pose estimada y se inicializan menos particulas para quitarle costo computacional
+            elseif idx == 101 % se obtiene la pose estimada y se inicializan menos particulas para quitarle costo computacional
                 num_particles = 25;
                 new_particles = localization.initialize_particles_in_pose(num_particles, pose_est, map);
                 [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, M);
@@ -190,7 +198,7 @@ for idx = 2:numel(tVec)
             end
         
         case 'calculate_destiny' % calcular el destino y generar la ruta
-            [path_points, total_cost, path_length] = astar(map.Resolution, pose(1:2, idx-1), goal_world, distance_map, M);
+            [path_points, total_cost, path_length] = astar(map.Resolution, pose_est(1:2), goal_world, distance_map_para_astar, Mapa_auxiliar);
             next_wp_idx = size(path_points, 1);
             robot_state = 'navigation';
         

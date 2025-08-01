@@ -1,8 +1,11 @@
 function [path_points, total_cost, path_length] = astar(resolution, start_world, goal_world, distance_map, M)
     
-    M_aux = flipud(M);
+    if nargin < 6
+        plot_flag = false; % por defecto, no graficar
+    end
+
     % Dimensiones
-    [h, w] = size(M_aux);
+    [h, w] = size(M);
     
     % Inicialización
     costs = ones(h,w)*inf;
@@ -42,7 +45,7 @@ function [path_points, total_cost, path_length] = astar(resolution, start_world,
         n = neighbors(parent, [h, w]);
         for i = 1:size(n,1)
             child = n(i,:);
-            cost_val = costs(y,x) + edge_cost(parent, child, M_aux, distance_map);
+            cost_val = costs(y,x) + edge_cost(parent, child, M, distance_map);
             heuristic_val = heuristic(child, goal);
             if cost_val < costs(child(1), child(2))
                 costs(child(1), child(2)) = cost_val;
@@ -68,4 +71,20 @@ function [path_points, total_cost, path_length] = astar(resolution, start_world,
     end
 
     total_cost = costs(goal(1), goal(2));
+
+
+        figure; hold on; axis equal;
+        imagesc(M); colormap(gray);
+        set(gca, 'YDir', 'normal');
+        title('Ruta A* encontrada');
+        xlabel('X'); ylabel('Y');
+
+        % Graficar camino
+        plot(path_points(:,1)*resolution, path_points(:,2)*resolution, 'b-', 'LineWidth', 2);
+
+        % Graficar inicio y meta
+        plot(start_world(1)*resolution, start_world(2)*resolution, 'go', 'MarkerSize', 10, 'LineWidth', 2);
+        plot(goal_world(1)*resolution,  goal_world(2)*resolution,  'ro', 'MarkerSize', 10, 'LineWidth', 2);
+
+        legend({'Ruta','Inicio','Meta'});
 end
