@@ -1,7 +1,8 @@
 function [path_points, total_cost, path_length] = astar(resolution, start_world, goal_world, distance_map, M)
-
+    
+    M_aux = flipud(M);
     % Dimensiones
-    [h, w] = size(M);
+    [h, w] = size(M_aux);
     
     % Inicialización
     costs = ones(h,w)*inf;
@@ -41,7 +42,7 @@ function [path_points, total_cost, path_length] = astar(resolution, start_world,
         n = neighbors(parent, [h, w]);
         for i = 1:size(n,1)
             child = n(i,:);
-            cost_val = costs(y,x) + edge_cost(parent, child, M, distance_map);
+            cost_val = costs(y,x) + edge_cost(parent, child, M_aux, distance_map);
             heuristic_val = heuristic(child, goal);
             if cost_val < costs(child(1), child(2))
                 costs(child(1), child(2)) = cost_val;
