@@ -1,5 +1,5 @@
 function weights = measurement_model_likelihood_field(map, particles, ranges, distance_map, M)
-    explored_map = (M < 0.1) | (M > 0.65);
+    explored_map = (M < 0.195) | (M > 0.65);
     n_particles = size(particles, 1);
     n_ray = length(ranges);
     

@@ -42,11 +42,11 @@ function [path_points, total_cost, path_length] = astar(resolution, start_world,
         parent = [y, x];
         closed_list(y,x) = 1;
 
-        n = neighbors(parent, [h, w]);
+        n = planning.neighbors(parent, [h, w]);
         for i = 1:size(n,1)
             child = n(i,:);
-            cost_val = costs(y,x) + edge_cost(parent, child, M, distance_map);
-            heuristic_val = heuristic(child, goal);
+            cost_val = costs(y,x) + planning.edge_cost(parent, child, M, distance_map);
+            heuristic_val = planning.heuristic(child, goal);
             if cost_val < costs(child(1), child(2))
                 costs(child(1), child(2)) = cost_val;
                 heuristics(child(1), child(2)) = heuristic_val;
@@ -73,7 +73,7 @@ function [path_points, total_cost, path_length] = astar(resolution, start_world,
     total_cost = costs(goal(1), goal(2));
 
 
-        figure; hold on; axis equal;
+        figure(1000); hold on; axis equal;
         imagesc(M); colormap(gray);
         set(gca, 'YDir', 'normal');
         title('Ruta A* encontrada');

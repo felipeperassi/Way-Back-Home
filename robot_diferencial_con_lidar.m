@@ -29,7 +29,7 @@ end
 %% Definicion del robot (disco de diametro = 0.35m)
 R = 0.072/2;                % Radio de las ruedas [m]
 L = 0.235;                  % Distancia entre ruedas [m]
-dd = DifferentialDrive(R,L); % creacion del Simulador de robot diferencial
+dd = simulator.DifferentialDrive(R,L); % creacion del Simulador de robot diferencial
 
 %% Creacion del entorno
 load mapa_TP_2025a.mat      %carga el mapa como occupancyMap en la variable 'map'
@@ -48,7 +48,7 @@ else
 end
 
 %% Crear sensor lidar en simulador
-lidar = LidarSensor;
+lidar = simulator.LidarSensor;
 lidar.sensorOffset = [0,0];     % Posicion del sensor en el robot (asumiendo mundo 2D)
 scaleFactor = 3;                %decimar lecturas de lidar acelera el algoritmo
 num_scans = 513/scaleFactor;
@@ -59,7 +59,7 @@ lidar.scanAngles = linspace(hokuyo_step_a, hokuyo_step_c, num_scans);
 lidar.maxRange = 5;
 
 %% Crear visualizacion
-viz = Visualizer2D;
+viz = simulator.Visualizer2D;
 viz.mapName = 'map';
 attachLidarSensor(viz,lidar);
 
@@ -67,7 +67,7 @@ attachLidarSensor(viz,lidar);
 
 simulationDuration = 3*60; %3*60;     % Duracion total [s]
 sampleTime = 0.1;                   % Sample time [s]
-initPose = [10; 17; pi/2];           % Pose inicial (x y theta) del robot simulado (el robot puede arrancar en cualquier lugar valido del mapa)
+initPose = [17; 17; pi/2];           % Pose inicial (x y theta) del robot simulado (el robot puede arrancar en cualquier lugar valido del mapa)
                                     %  probar iniciar el robot en distintos lugares                                  
                                   
 % Inicializar vectores de tiempo:1010
@@ -93,10 +93,8 @@ end
 % Inicializar las particulas
 num_particles = 10000; % Numero de particulas
 particles = localization.initialize_particles(num_particles, map); % Inicializar particulas en el mapa
-[distance_map, M] = localization.calculate_distance_map(map); % Calcular mapa de distancias
-Mapa_auxiliar = occupancyMatrix(map);
-Mapa_auxiliar = flipud(Mapa_auxiliar);  % Y hacia arriba
-distance_map_para_astar = bwdist(Mapa_auxiliar > 0.1);
+[distance_map, M] = localization.calculate_distance_map(map, false); % Calcular mapa de distancias
+[distance_map_flipped, M_flipped] = localization.calculate_distance_map(map, true); % Calcular mapa de distancias con Y hacia arriba
 
 for idx = 2:numel(tVec)   
 
@@ -108,7 +106,8 @@ for idx = 2:numel(tVec)
     %% ---- COMPLETAR ACA: ----
     disp('iteracion: ' + string(idx));
     if idx == 2
-        robot_state = 'localization';
+        robot_state = 'localization'; % Estado inicial del robot
+        var_pose_est = 100 * ones(3,1); % Inicializar varianza de pose estimada
         v_cmd = 0;
         w_cmd = 0;   
         count_react = 0;
@@ -149,7 +148,7 @@ for idx = 2:numel(tVec)
         % Velocidad resultante
         [v,w] = forwardKinematics(dd,wL,wR);
         velB = [v; 0; w]; % velocidades en la terna del robot [vx;vy;w]
-        vel = bodyToWorld(velB, pose(:,idx-1));  % Conversion de la terna del robot a la global
+        vel = simulator.bodyToWorld(velB, pose(:,idx-1));  % Conversion de la terna del robot a la global
         % Realizar un paso de integracion
         pose(:,idx) = pose(:,idx-1) + vel*sampleTime; 
         % Tomar nueva medicion del lidar
@@ -176,33 +175,35 @@ for idx = 2:numel(tVec)
     [max_dist, idx_max] = max(ranges, [], 'omitnan'); 
     max_angle = wrapToPi(lidar.scanAngles(idx_max));
 
-    obstacle = obstacle_detected(min_dist);
+    obstacle = movement.obstacle_detected(min_dist);
 
     switch robot_state
         case 'localization' % el robot se localiza en el mapa
+            [pose_est, var_pose_est, particles] = localization.particles_filter(map, particles, vel, sampleTime, ranges, distance_map, M);
+            [v_cmd, w_cmd, count_react, robot_state] = movement.reactive_movement(v_cmd, w_cmd, max_angle, obstacle, robot_state, count_react, true);
+            converged_pose = all(var_pose_est <= 0.3);
 
-            % Control simple
-            v_cmd = 0; 
-            w_cmd = 0.1;
-
-            if idx <= 300 % primeras iteraciones, se generan muchas partículas
-                [pose_est, particles] = localization.particles_filter(map, particles, vel, sampleTime, ranges, distance_map, M);
-
-            elseif idx == 301 % se obtiene la pose estimada y se inicializan menos particulas para quitarle costo computacional
+            if converged_pose % se obtiene la pose estimada y se inicializan menos particulas para quitarle costo computacional
                 num_particles = 100;
                 new_particles = localization.initialize_particles_in_pose(num_particles, pose_est, map);
-                [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, M);
+                [pose_est, var_pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, M);
 
-                robot_state = 'calculate_destiny'; 
+                correct_localization = localization.confirm_localization(new_particles, lidar, ranges);
+                if correct_localization
+                    robot_state = 'calculate_destiny'; % Cambiar estado para calcular el destino
+                else
+                    particles = localization.initialize_particles(num_particles, map);
+                    robot_state = 'localization'; % Reintentar localización
+                end
             end
         
         case 'calculate_destiny' % calcular el destino y generar la ruta
-            [path_points, total_cost, path_length] = astar(map.Resolution, pose_est(1:2), goal_world, distance_map_para_astar, Mapa_auxiliar);
+            [path_points, total_cost, path_length] = planning.astar(map.Resolution, pose_est(1:2), goal_world, distance_map_flipped, M_flipped);
             next_wp_idx = size(path_points, 1);
             robot_state = 'navigation';
         
         case 'navigation' % el robot navega hacia el destino
-            [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, M);
+            [pose_est, var_pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, M);
 
             if obstacle
                 disp('Detecte un obstaculo a ' + string(min_dist));
@@ -246,39 +247,17 @@ for idx = 2:numel(tVec)
             end
         
         case 'reactive' % el robot reacciona ante un obstaculo detectado
-            [pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, M);
-
-            if obstacle && count_react < 20
-                disp('Obstaculo detectado, deteniendo robot');
-                v_cmd = 0;
-                w_cmd = 0.5 * max_angle; 
-                count_react = count_react + 1;
-            
-            elseif obstacle && count_react >= 20 && count_react < 30
-                disp('Obstaculo detectado, girando para evitar');
-                v_cmd = 0.05;
-                w_cmd = 0.5 * max_angle;
-                count_react = count_react + 1;
-
-            elseif obstacle && count_react >= 30
-                count_react = 0;
-                robot_state = 'calculate_destiny';
-
-            else
-                count_react = 0;
-                robot_state = 'calculate_destiny'; 
-            end
+            [pose_est, var_pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, M);
+            [v_cmd, w_cmd, count_react, robot_state] = movement.reactive_movement(v_cmd, w_cmd, max_angle, obstacle, robot_state, count_react, false);
         
         case 'stationary' % el robot se detiene
             v_cmd = 0;
             w_cmd = 0;
 
-        w_cmd = max(min(w_cmd, 0.5), -0.5);
-        v_cmd = max(min(v_cmd, 0.1), -0.1);
     end
     
     disp('Pose estimada:' + string(pose_est));
-
+    disp('Varianza de la pose estimada:' + string(var_pose_est));
     % ---- Fin del COMPLETAR ACA ----
         
     %%

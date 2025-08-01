@@ -1,9 +1,18 @@
-function [distance_map, M] = calculate_distance_map(map)
-    M = getOccupancy(map);
-    binary_map = M > 0.1;
-    cell_distance_map = bwdist(binary_map, "euclidean");
-    distance_map = cell_distance_map / map.Resolution;
+function [distance_map, M] = calculate_distance_map(map, flip_y)
+    if flip_y
+        M = occupancyMatrix(map);
+        M = flipud(M); 
+    else
+        M = getOccupancy(map);
+    end
+
+    binary_map = M > 0.195;
+    distance_map = bwdist(binary_map, "euclidean");
     
+    if ~flip_y
+        distance_map = distance_map / map.Resolution;
+    end
+
     % Comparar ambos mapas con la misma escala de colores
     % figure;
     % subplot(1,2,1);

@@ -1,7 +1,7 @@
 function particles = initialize_particles_in_pose(num_particles, pose, map)
     particles = zeros(num_particles, 3); % [x, y, theta]
     count = 0;
-    sigma = 0.15; % Desviación por el radio del robot
+    sigma = 0.1; % Desviación por el radio del robot
     
     while count < num_particles
         x = pose(1) + randn * sigma;
