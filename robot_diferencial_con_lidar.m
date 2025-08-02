@@ -65,10 +65,11 @@ attachLidarSensor(viz,lidar);
 
 %% Parametros de la Simulacion
 
-simulationDuration = 3*60; %3*60;     % Duracion total [s]
+simulationDuration = 3*60;          % Duracion total [s]
 sampleTime = 0.1;                   % Sample time [s]
-initPose = [17; 17; pi/2];           % Pose inicial (x y theta) del robot simulado (el robot puede arrancar en cualquier lugar valido del mapa)
-                                    %  probar iniciar el robot en distintos lugares                                  
+initPose = [30, 30, -pi/2];         % Pose inicial (x y theta) del robot simulado (el robot puede arrancar en cualquier lugar valido del mapa)
+                                    % Probar iniciar el robot en distintos lugares   
+                                    % Medio: [18, 16, pi/2]; Abajo Izq: [6.5; 5; pi/2]; Medio Der: [30; 5; pi];                               
                                   
 % Inicializar vectores de tiempo:1010
 tVec = 0:sampleTime:simulationDuration;         % Vector de Tiempo para duracion total
@@ -91,10 +92,20 @@ else
 end
 
 % Inicializar las particulas
-num_particles = 10000; % Numero de particulas
-particles = localization.initialize_particles(num_particles, map); % Inicializar particulas en el mapa
-[distance_map, M] = localization.calculate_distance_map(map, false); % Calcular mapa de distancias
+num_init_particles = 1000;                                              % Numero de particulas
+particles = localization.initialize_particles(num_init_particles, map); % Inicializar particulas en el mapa
+
+% Mapas de distancias y de ocupación
+[distance_map, M] = localization.calculate_distance_map(map, false);                % Calcular mapa de distancias
 [distance_map_flipped, M_flipped] = localization.calculate_distance_map(map, true); % Calcular mapa de distancias con Y hacia arriba
+
+% Variables del robot
+robot_state = 'localization';   % Estado inicial del robot
+var_pose_est = 100 * ones(3,1); % Varianza de pose estimada
+v_cmd = 0;                      % Velocidad lineal inicial
+w_cmd = 0;                      % Velocidad angular inicial
+count_react = 0;                % Contador de reacciones ante obstáculos
+goal_world  = [12.5, 15];       % Coordenadas del LAR
 
 for idx = 2:numel(tVec)   
 
@@ -103,18 +114,8 @@ for idx = 2:numel(tVec)
     % (mantener las velocidades bajas (v_cmd < 0.1) (w_cmd < 0.5) minimiza vibraciones y
     % mejora las mediciones.   
     
-    %% ---- COMPLETAR ACA: ----
+    %% 
     disp('iteracion: ' + string(idx));
-    if idx == 2
-        robot_state = 'localization'; % Estado inicial del robot
-        var_pose_est = 100 * ones(3,1); % Inicializar varianza de pose estimada
-        v_cmd = 0;
-        w_cmd = 0;   
-        count_react = 0;
-        goal_world  = [12.5, 15];  % Coordenadas del LAR
-    end
-
-    % ---- fin del COMPLETAR ACA ----
     
     %% a partir de aca el robot real o el simulador ejecutan v_cmd y w_cmd:
     
@@ -165,34 +166,32 @@ for idx = 2:numel(tVec)
     % variable ranges la medicion del lidar para ser usada y
     % en la variable pose(:,idx) la odometría actual.
     
-    %% ---- COMPLETAR ACA: ----
-        % hacer algo con la medicion del lidar (ranges) y con el robot_state
-        % actual de la odometria ( pose(:,idx) ) que se utilizará en la
-        % proxima iteración para la generacion de comandos de velocidad
-        % ...
+    %% 
     
-    [min_dist, idx_min] = min(ranges, [], 'omitnan');  
-    [max_dist, idx_max] = max(ranges, [], 'omitnan'); 
-    max_angle = wrapToPi(lidar.scanAngles(idx_max));
+    [min_dist, idx_min] = min(ranges, [], 'omitnan');  % Encuentra la distancia mínima y su índice
+    [max_dist, idx_max] = max(ranges, [], 'omitnan');  % Encuentra la distancia máxima y su índice
+    max_angle = wrapToPi(lidar.scanAngles(idx_max));   % Ángulo máximo del lidar
 
-    obstacle = movement.obstacle_detected(min_dist);
+    obstacle = movement.obstacle_detected(min_dist);   % Detecta si hay un obstáculo cercano
 
     switch robot_state
         case 'localization' % el robot se localiza en el mapa
             [pose_est, var_pose_est, particles] = localization.particles_filter(map, particles, vel, sampleTime, ranges, distance_map, M);
             [v_cmd, w_cmd, count_react, robot_state] = movement.reactive_movement(v_cmd, w_cmd, max_angle, obstacle, robot_state, count_react, true);
-            converged_pose = all(var_pose_est <= 0.3);
+            converged_pose = all(var_pose_est(1:2) <= 0.3);
 
             if converged_pose % se obtiene la pose estimada y se inicializan menos particulas para quitarle costo computacional
                 num_particles = 100;
                 new_particles = localization.initialize_particles_in_pose(num_particles, pose_est, map);
                 [pose_est, var_pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, distance_map, M);
 
-                correct_localization = localization.confirm_localization(new_particles, lidar, ranges);
+                correct_localization = localization.confirm_localization(pose_est, lidar, ranges); % se usa raycasting para confirmar la localización
                 if correct_localization
+                    disp('Localización confirmada');
                     robot_state = 'calculate_destiny'; % Cambiar estado para calcular el destino
                 else
-                    particles = localization.initialize_particles(num_particles, map);
+                    disp('Localización no confirmada, reintentando...');
+                    particles = localization.initialize_particles(num_init_particles, map);
                     robot_state = 'localization'; % Reintentar localización
                 end
             end
@@ -208,42 +207,10 @@ for idx = 2:numel(tVec)
             if obstacle
                 disp('Detecte un obstaculo a ' + string(min_dist));
                 robot_state = 'reactive';
+                
             else
                 disp('Siguiendo ruta planificada');
-                % Extraer pose actual estimada para el control
-                x = pose(1, idx-1);
-                y = pose(2, idx-1);
-                theta = pose(3, idx-1);
-                
-                goal_point = path_points(1,:);  % Objetivo final
-                dist_to_goal = norm([x, y] - goal_point);
-
-                if dist_to_goal < 0.5
-                    robot_state = 'stationary';
-                else
-                    goalReached = false;
-                    while ~goalReached && next_wp_idx > 1
-                        wp = path_points(next_wp_idx, :);
-                        dx = wp(1) - x;
-                        dy = wp(2) - y;
-                        dist_to_wp = norm([dx dy]);
-                        if dist_to_wp < 0.4
-                            next_wp_idx = next_wp_idx - 1;
-                        else
-                            goalReached = true;
-                        end
-                    end
-
-                    wp = path_points(next_wp_idx, :);
-                    dx = wp(1) - x;
-                    dy = wp(2) - y;
-                    angle_to_wp = atan2(dy, dx);
-                    angle_diff = wrapToPi(angle_to_wp - theta);
-                    
-                    % Control simple
-                    v_cmd = 0.5; 
-                    w_cmd = 1.5 * angle_diff;
-                end
+                [robot_state, v_cmd, w_cmd, next_wp_idx] = movement.follow_path(pose_est, path_points, next_wp_idx);
             end
         
         case 'reactive' % el robot reacciona ante un obstaculo detectado
@@ -258,7 +225,6 @@ for idx = 2:numel(tVec)
     
     disp('Pose estimada:' + string(pose_est));
     disp('Varianza de la pose estimada:' + string(var_pose_est));
-    % ---- Fin del COMPLETAR ACA ----
         
     %%
     % actualizar visualizacion
