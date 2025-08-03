@@ -6,7 +6,7 @@ function [correct_localization] = confirm_localization(pose_est, lidar, ranges)
     % Calcular la diferencia entre las mediciones reales y simuladas
     diff_ranges = abs(ranges - simulated_ranges);
     diff_ranges = diff_ranges(~isnan(diff_ranges));
-    if sum(diff_ranges < 0.15) > (0.5 * length(diff_ranges)) % Al menos el 50% de las distancias deben ser menores a 0.2
+    if sum(diff_ranges < 0.15) > (0.5 * length(diff_ranges)) % Al menos el 50% de las distancias deben ser menores a 0.15
         correct_localization = true;
     else
         correct_localization = false;
