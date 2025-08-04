@@ -6,14 +6,14 @@ clear all
 verMatlab= ver('MATLAB');       % en MATLAB2020a funciona bien, ajustado para R2016b, los demas a pelearla...
 
 simular_ruido_lidar = false;    %simula datos no validos del lidar real, probar si se la banca
-use_roomba=false;               % false para desarrollar usando el simulador, true para conectarse al robot real
+use_roomba=true;               % false para desarrollar usando el simulador, true para conectarse al robot real
 
 %% Roomba
 if use_roomba   % si se usa el robot real, se inicializa la conexion    
     rosshutdown
     pause(1)
     ipaddress_core = '192.168.0.102';
-    ipaddress_local = '192.168.0.100';  %mi ip en a red TurtleNet
+    ipaddress_local = '192.168.0.101';  %mi ip en a red TurtleNet
     setenv('ROS_IP', '192.168.0.100');
     setenv('ROS_MASTER_URI', ['http://', ipaddress_core, ':11311']);
     rosinit(ipaddress_core,11311, 'NodeHost', ipaddress_local)
@@ -23,6 +23,7 @@ if use_roomba   % si se usa el robot real, se inicializa la conexion
     cmdPub = rospublisher('/auto_cmd_vel', 'geometry_msgs/Twist');
     pause(.5) % Esperar a que se registren los canales
     cmdMsg = rosmessage(cmdPub);  
+    disp('HOLAAA')
 end
     
 
@@ -106,9 +107,10 @@ v_cmd = 0;                      % Velocidad lineal inicial
 w_cmd = 0;                      % Velocidad angular inicial
 count_react = 0;                % Contador de reacciones ante obstáculos
 goal_world  = [12.5, 15];       % Coordenadas del LAR
+vel = 0;
 
 for idx = 2:numel(tVec)   
-
+    tic
     % Generar aqui criteriosamente velocidades lineales v_cmd y angulares w_cmd
     % -0.5 <= v_cmd <= 0.5 and -4.25 <= w_cmd <= 4.25
     % (mantener las velocidades bajas (v_cmd < 0.1) (w_cmd < 0.5) minimiza vibraciones y
@@ -181,6 +183,7 @@ for idx = 2:numel(tVec)
             converged_pose = all(var_pose_est(1:2) <= 0.3); % Convergencia dada por la varianza de las partículas en x e y
 
             if converged_pose % Se tiene una pose estimada confiable
+                disp('converge');
                 num_particles = 100; % Reducir numero de particulas para mejorar la eficiencia
                 new_particles = localization.initialize_particles_in_pose(num_particles, pose_est, map);
                 [pose_est, var_pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, lidar.scanAngles, distance_map, occupancy_map);
@@ -235,10 +238,10 @@ for idx = 2:numel(tVec)
     
     disp('Pose estimada:' + string(pose_est));
     disp('Varianza de la pose estimada:' + string(var_pose_est));
-        
+    toc
     %%
     % actualizar visualizacion
-    viz(pose(:,idx),ranges)
+    % viz(pose(:,idx),ranges)
     waitfor(r);
 end
 

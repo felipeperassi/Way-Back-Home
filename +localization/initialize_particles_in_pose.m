@@ -32,8 +32,8 @@ function particles = initialize_particles_in_pose(num_particles, pose, map)
 
     %% Visualización de la distribución de partículas
 
-    figure(250); clf;
-    show(map); hold on;
-    plot(particles(:,1), particles(:,2), 'b.'); axis equal;
-    title('Distribución de partículas en pose conocida');
+    % figure(250); clf;
+    % show(map); hold on;
+    % plot(particles(:,1), particles(:,2), 'b.'); axis equal;
+    % title('Distribución de partículas en pose conocida');
 end
