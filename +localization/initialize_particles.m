@@ -30,8 +30,8 @@ function particles = initialize_particles(num_particles, map)
 
     %% Visualización de la distribución inicial de partículas
     
-    % figure(300); clf;
-    % show(map); hold on;
-    % plot(particles(:,1), particles(:,2), 'b.'); axis equal;
-    % title('Distribución inicial de partículas');
+    figure(300); clf;
+    show(map); hold on;
+    plot(particles(:,1), particles(:,2), 'b.'); axis equal;
+    title('Distribución inicial de partículas');
 end

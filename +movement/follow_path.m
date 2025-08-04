@@ -59,7 +59,7 @@ function [robot_state, v_cmd, w_cmd, next_wp_idx] = follow_path(pose, path_point
         angle_diff = wrapToPi(angle_to_wp - theta);
         
         % Se ajustan las velocidades lineal y angular
-        v_cmd = 0.3; 
+        v_cmd = 0.5; 
         w_cmd = 1.5 * angle_diff;
         robot_state = 'navigation';
     end

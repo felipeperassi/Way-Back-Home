@@ -52,7 +52,7 @@ function [v_cmd, w_cmd, count_react, robot_state] = reactive_movement(v_cmd, w_c
 
         % El robot se está localizando, entonces se mueve lentamente
         if is_localizing
-            v_cmd = 0.3; 
+            v_cmd = 0.5; 
             w_cmd = 1.5 * max_angle;    %min(0.5 * max_angle, 0.5);
             robot_state = 'localization';
         

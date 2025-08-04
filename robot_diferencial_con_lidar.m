@@ -6,14 +6,14 @@ clear all
 verMatlab= ver('MATLAB');       % en MATLAB2020a funciona bien, ajustado para R2016b, los demas a pelearla...
 
 simular_ruido_lidar = false;    %simula datos no validos del lidar real, probar si se la banca
-use_roomba=true;               % false para desarrollar usando el simulador, true para conectarse al robot real
+use_roomba=false;               % false para desarrollar usando el simulador, true para conectarse al robot real
 
 %% Roomba
 if use_roomba   % si se usa el robot real, se inicializa la conexion    
     rosshutdown
     pause(1)
     ipaddress_core = '192.168.0.102';
-    ipaddress_local = '192.168.0.101';  %mi ip en a red TurtleNet
+    ipaddress_local = '192.168.0.100';  %mi ip en a red TurtleNet
     setenv('ROS_IP', '192.168.0.100');
     setenv('ROS_MASTER_URI', ['http://', ipaddress_core, ':11311']);
     rosinit(ipaddress_core,11311, 'NodeHost', ipaddress_local)
@@ -23,7 +23,6 @@ if use_roomba   % si se usa el robot real, se inicializa la conexion
     cmdPub = rospublisher('/auto_cmd_vel', 'geometry_msgs/Twist');
     pause(.5) % Esperar a que se registren los canales
     cmdMsg = rosmessage(cmdPub);  
-    disp('HOLAAA')
 end
     
 
@@ -65,10 +64,9 @@ viz.mapName = 'map';
 attachLidarSensor(viz,lidar);
 
 %% Parametros de la Simulacion
-
 simulationDuration = 3*60;          % Duracion total [s]
 sampleTime = 0.1;                   % Sample time [s]
-initPose = [18, 16, pi/2];             % Pose inicial (x y theta) del robot simulado (el robot puede arrancar en cualquier lugar valido del mapa)
+initPose = [17, 16, pi/2];          % Pose inicial (x y theta) del robot simulado (el robot puede arrancar en cualquier lugar valido del mapa)
                                     % Probar iniciar el robot en distintos lugares
                                     % Medio: [18, 16, pi/2]; Abajo Izq: [6.5; 5; pi/2]; Medio Der: [30; 5; pi]; Arriba Izq [30, 30, -pi/2];
                                   
@@ -107,7 +105,6 @@ v_cmd = 0;                      % Velocidad lineal inicial
 w_cmd = 0;                      % Velocidad angular inicial
 count_react = 0;                % Contador de reacciones ante obstáculos
 goal_world  = [12.5, 15];       % Coordenadas del LAR
-vel = 0;
 
 for idx = 2:numel(tVec)   
     tic
@@ -122,16 +119,14 @@ for idx = 2:numel(tVec)
     %% a partir de aca el robot real o el simulador ejecutan v_cmd y w_cmd:
     
     if use_roomba       % para usar con el robot real
-        
+
         % Enviar comando de velocidad en el formato que pide el robot:
         cmdMsg.Linear.X = v_cmd;
         cmdMsg.Angular.Z = w_cmd;
         send(cmdPub,cmdMsg);
-        
         % Recibir datos de lidar y odometría
         scanMsg = receive(laserSub);
         odompose = odomSub.LatestMessage;
-        
         % Obtener vector de distancias del lidar
         ranges_full = laserSub.LatestMessage.Ranges;
         ranges = double(ranges_full(1:scaleFactor:end));
@@ -143,7 +138,6 @@ for idx = 2:numel(tVec)
         odompose.Pose.Pose.Orientation.Y, odompose.Pose.Pose.Orientation.Z];
         odomRotation = quat2eul(odomQuat);
         pose(:,idx) = [odompose.Pose.Pose.Position.X + initPose(1); odompose.Pose.Pose.Position.Y+ initPose(2); odomRotation(1)];
-    
     else        % para usar el simulador
    
         % Mover el robot segun los comandos generados
@@ -169,7 +163,7 @@ for idx = 2:numel(tVec)
     % en la variable pose(:,idx) la odometría actual.
     
     %% 
-    
+
     [min_dist, idx_min] = min(ranges, [], 'omitnan');  % Encuentra la distancia mínima y su índice
     [max_dist, idx_max] = max(ranges, [], 'omitnan');  % Encuentra la distancia máxima y su índice
     max_angle = wrapToPi(lidar.scanAngles(idx_max));   % Ángulo máximo del lidar
@@ -209,6 +203,7 @@ for idx = 2:numel(tVec)
         case 'navigation' % Navegación hacia el destino con la ruta generada
             [pose_est, var_pose_est, new_particles] = localization.particles_filter(map, new_particles, vel, sampleTime, ranges, lidar.scanAngles, distance_map, occupancy_map);
             
+            % Alternativa: confirmar localización con raycasting al seguir la ruta
             % correct_localization = localization.confirm_localization(pose_est, lidar, ranges);
             % if ~correct_localization && idx - idx_start < 5
             %     disp('Localización perdida, reiniciando partículas');
@@ -241,7 +236,7 @@ for idx = 2:numel(tVec)
     toc
     %%
     % actualizar visualizacion
-    % viz(pose(:,idx),ranges)
+    viz(pose(:,idx),ranges)
     waitfor(r);
 end
 

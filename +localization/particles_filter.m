@@ -40,9 +40,10 @@ function [mean_pose, var_pose, new_particles] = particles_filter(map, particles,
 
     %% Visualización de la distribución de partículas
 
-    % figure(100); clf;
-    % show(map); hold on;
-    % plot(new_particles(:,1), new_particles(:,2), 'b.'); axis equal;
-    % quiver(new_particles(:,1), new_particles(:,2), cos(new_particles(:,3)), sin(new_particles(:,3)), 0, 'r')
-    % title('Distribución de partículas después del resampling');
+    figure(100); clf;
+    show(map); hold on;
+    plot(new_particles(:,1), new_particles(:,2), 'b.'); axis equal;
+    quiver(new_particles(:,1), new_particles(:,2), cos(new_particles(:,3)), sin(new_particles(:,3)), 0, 'r')
+    plot(mean_pose(1), mean_pose(2), 'go', 'MarkerSize', 6, 'MarkerFaceColor', 'g'); 
+    title('Distribución de partículas después del resampling');
 end
