@@ -1,4 +1,15 @@
 function [correct_localization] = confirm_localization(pose_est, lidar, ranges)
+    % CONFIRM_LOCALIZATION - Verifica si la pose estimada del robot es consistente con las mediciones LiDAR.
+    %
+    % Entradas:
+    %   pose_est   - Pose estimada del robot [x, y, theta]
+    %   lidar      - Función simuladora de LiDAR que recibe una pose y devuelve distancias simuladas
+    %   ranges     - Mediciones reales del sensor LiDAR
+    %
+    % Salidas:
+    %   correct_localization - Booleano que indica si la localización es correcta
+
+    %% Validación con la pose estimada
 
     % Simular el rango de medición del lidar basado en la pose estimada
     simulated_ranges = lidar(pose_est');
@@ -6,11 +17,15 @@ function [correct_localization] = confirm_localization(pose_est, lidar, ranges)
     % Calcular la diferencia entre las mediciones reales y simuladas
     diff_ranges = abs(ranges - simulated_ranges);
     diff_ranges = diff_ranges(~isnan(diff_ranges));
-    if sum(diff_ranges < 0.15) > (0.5 * length(diff_ranges)) % Al menos el 50% de las distancias deben ser menores a 0.15
+
+    % Verificar si al menos el 50% de las distancias medidas son menores a un umbral
+    if sum(diff_ranges < 0.15) > (0.5 * length(diff_ranges)) % Umbral de 0.15 metros, para que no haya falsos positivos
         correct_localization = true;
     else
         correct_localization = false;
     end
+
+    %% Alternativa: Validación con partículas
 
     % n_particles = size(particles, 1);
     % bool_vector = false(n_particles, 1);

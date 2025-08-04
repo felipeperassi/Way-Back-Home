@@ -1,69 +1,39 @@
 function new_particles = resample(particles, weights)
+    % RESAMPLE - Realiza el remuestreo de partículas según el método SUS (Stochastic Universal Sampling) y agregando ruido gaussiano.
+    %
+    % Entradas:
+    %   particles   - Matriz de partículas N x 3 con las poses de las partículas [x, y, theta]
+    %   weights     - Vector con los pesos normalizados de cada partícula
+    %
+    % Salidas:
+    %   new_particles - Matriz N x 3 con las nuevas partículas generadas tras el resampleo
+
+    % Inicializar la matriz de nuevas partículas
     new_particles = zeros(size(particles));
+
+    % Número de partículas y dimensiones
     M = size(particles, 1);
     dim = size(particles, 2);
 
-    % Definir sigma fijo (por ejemplo, para x e y en metros, y theta en radianes)
-    sigma = [0.167, 0.167, deg2rad(5)];  % suponiendo partículas [x, y, theta]
+    % Desviaciones estándar del ruido gaussiano agregado a cada partícula
+    % Para [x, y] se usa 0.167 m por el radio del robot y 5 grados para theta
+    sigma = [0.167, 0.167, deg2rad(5)];
 
+    % Cálculo de la suma acumulada de los pesos, se asegura que sume 1
     cumulative_sum = cumsum(weights);
     cumulative_sum(end) = 1.0;
 
+    % Generación de punteros equiespaciados para el resampleo
     step = 1 / M;
     start = rand * step;
     pointers = start + (0:M-1)' * step;
 
+    % Realizar el remuestreo de partículas
     i = 1;
     for m = 1:M
         while pointers(m) > cumulative_sum(i)
             i = i + 1;
         end
-        noise = randn(1, dim) .* sigma;
-        new_particles(m, :) = particles(i, :) + noise;
+        new_particles(m, :) = particles(i, :) + randn(1, dim) .* sigma;
     end
 end
-    % M = size(particles, 1);
-    % N_best = round(M * 0.6);
-    % N_worst = M - N_best;
-
-    % Neff = 1 / sum(weights.^2);
-    % sigma_local = [3, 3, deg2rad(5)]; % Ruido agregado 
-    
-    % new_particles = sus(particles, weights, M);
-
-    % [~, idx_sorted] = sort(weights, 'descend');
-    % best_particles = particles(idx_sorted(1:N_best), :); % Seleccionar las mejores N_best partículas
-
-    % corrected_particles = zeros(N_worst, 3);
-    % for i = 1:N_worst
-    %     idx = randi(N_best); 
-    %     corrected_particles(i, :) = best_particles(idx, :) + randn(1, 3) .* sigma_local;
-    %     if getOccupancy(map, corrected_particles(i, 1:2)) > 0.1
-    %         corrected_particles(i, :) = best_particles(idx, :); 
-    %     end
-    % end
-    % if Neff < 0.5 * M 
-    %     new_particles = sus(particles, weights, M);
-
-    %     [~, idx_sorted] = sort(weights, 'descend');
-    %     best_particles = particles(idx_sorted(1:N_best), :); % Seleccionar las mejores N_best partículas
-
-    %     corrected_particles = zeros(N_worst, 3);
-    %     for i = 1:N_worst
-    %         idx = randi(N_best); 
-    %         corrected_particles(i, :) = best_particles(idx, :) + randn(1, 3) .* sigma_local;
-    %         if getOccupancy(map, corrected_particles(i, 1:2)) > 0.1
-    %             corrected_particles(i, :) = best_particles(idx, :); 
-    %         end
-    %     end
-    % else
-    %     new_particles = particles;
-    % end
-
-% n_local = round(0.3 * M); % 30% de las particulas
-        % idx_local = randsample(1:M, n_local, true, weights);
-        % local_particles = particles(idx_local, :) + randn(n_local, 3) .* sigma_local;
-
-        % new_particles = [best_particles; local_particles];
-        % M_new = size(new_particles, 1);  % nuevo número real de partículas
-        % weights = ones(M_new, 1) / M_new;    % pesos iguales normalizados
