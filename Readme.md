@@ -66,7 +66,7 @@ The algorithm was successfully tested on a **real robot**, using the hardware se
 ```text
 Way‑Back‑Home/
 |
-├── main.m # Main simulation script (provided by the course)
+├── main.m # Main simulation script
 |
 ├── localization/ # Particle filter + likelihood fields implementation
 |
