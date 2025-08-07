@@ -63,18 +63,55 @@ The algorithm was successfully tested on a **real robot**, using the hardware se
 
 ## 📁 Repository Structure
 
+
+
 ```text
-Way‑Back‑Home/
-|
+Way-Back-Home/
+│
 ├── main.m # Main simulation script
-|
-├── localization/ # Particle filter + likelihood fields implementation
-|
-├── planning/ # A* path planning module
-|
-├── movement/ # Differential-drive + reactive movement functions
-|
-└── maps/ # Map files (e.g., .mat, .tif) used in the simulator
+├── LICENSE # License file
+├── Readme.md # Project documentation
+│
+├── +internal/ # Internal utilities
+│   └── createMapFromName.m
+│
+├── +localization/ # Particle filter + likelihood fields implementation
+│   ├── calculate_distance_map.m
+│   ├── confirm_localization.m
+│   ├── initialize_particles.m
+│   ├── initialize_particles_in_pose.m
+│   ├── measurement_model.m
+│   ├── measurement_model_likelihood_field.m
+│   ├── odometry_model.m
+│   ├── particles_filter.m
+│   └── resample.m
+│
+├── +movement/ # Differential-drive + reactive movement functions
+│   ├── follow_path.m
+│   ├── obstacle_detected.m
+│   └── reactive_movement.m
+│
+├── +planning/ # A* path planning module
+│   ├── astar.m
+│   ├── edge_cost.m
+│   ├── heuristic.m
+│   └── neighbors.m
+│
+├── +simulator/ # Simulation components given by the course (robot, sensors, visualization)
+│   ├── DifferentialDrive.m
+│   ├── LidarSensor.m
+│   ├── Visualizer2D.m
+│   └── bodyToWorld.m
+│
+└── maps/ # Map files (e.g., .mat, .tif)
+    ├── imagen_mapa_viejo.tiff
+    ├── mapa_TP_2025a.mat
+    ├── mapa_fiuba_1er_piso.tiff
+    ├── mapa_fiuba_1p.mat
+    ├── mapa_fiuba_1p.tiff
+    ├── mapa_lae.mat
+    ├── otro_mapa_mas.mat
+    └── otro_mapa_viejo.mat
 ```
 
 ---
@@ -95,7 +132,7 @@ Then, in MATLAB:
 
 ```bash
 cd 'Way-Back-Home'
-main  #runs the simulation
+main  # runs the simulation
 ```
 
 By default, the main script runs in simulation mode. To prepare for hardware (if desired):
