@@ -66,7 +66,7 @@ The algorithm was successfully tested on a **real robot**, using the hardware se
 ```text
 Way‑Back‑Home/
 |
-├── robot_diferencial_con_lidar.m # Main simulation script (provided by the course)
+├── main.m # Main simulation script (provided by the course)
 |
 ├── localization/ # Particle filter + likelihood fields implementation
 |
@@ -95,7 +95,7 @@ Then, in MATLAB:
 
 ```bash
 cd 'Way-Back-Home'
-robot_diferencial_con_lidar  % runs the simulation
+main  % runs the simulation
 ```
 
 By default, the main script runs in simulation mode. To prepare for hardware (if desired):
