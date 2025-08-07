@@ -95,7 +95,7 @@ Then, in MATLAB:
 
 ```bash
 cd 'Way-Back-Home'
-main  % runs the simulation
+main  #runs the simulation
 ```
 
 By default, the main script runs in simulation mode. To prepare for hardware (if desired):
